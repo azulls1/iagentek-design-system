@@ -1,0 +1,13 @@
+node_modules
+dist
+.env
+.env.local
+.env.*.local
+
+# Local-only ops scripts — they read secrets from env, but do not commit
+# anything that contains hardcoded credentials.
+scripts/.secrets
+scripts/local-*.mjs
+
+# Local credentials cheatsheet (Supabase/MinIO/VPS) — NEVER commit
+contexto de proyecto/_credentials.md

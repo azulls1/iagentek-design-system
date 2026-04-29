@@ -1,0 +1,36 @@
+:root {
+  /* Named palette */
+  --color-forest: #04202C;
+  --color-evergreen: #304040;
+  --color-pine: #5B7065;
+  --color-fog: #C9D1C8;
+  --color-moss: #9EADA3;
+  --color-bark: #1A3036;
+  --color-midnight: #021519;
+
+  /* Primary action color */
+  --color-primary: #04202C;
+  --color-primary-light: #5B7065;
+  --color-primary-hover: #1A3036;
+  --color-primary-active: #021519;
+
+  /* Gray scale → forest-tinted greens */
+  --color-nxt-50: #F7F8F7;
+  --color-nxt-100: #EFF2F0;
+  --color-nxt-200: #DFE4E0;
+  --color-nxt-300: #C9D1C8;
+  --color-nxt-400: #9EADA3;
+  --color-nxt-500: #7D8F84;
+  --color-nxt-600: #5B7065;
+  --color-nxt-700: #304040;
+  --color-nxt-800: #1A3036;
+  --color-nxt-900: #04202C;
+
+  /* Surfaces */
+  --color-nav-bg: #04202C;
+  --color-page: #F7F8F7;
+  --color-surface: #FFFFFF;
+  --color-surface-dark: #304040;
+  --color-surface-darker: #1A3036;
+  --color-surface-darkest: #021519;
+}
