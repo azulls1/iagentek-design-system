@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Layers, ChevronDown, Check, Plus, X } from "lucide-react";
+import { Layers, ChevronDown, Check, Plus, X, Upload } from "lucide-react";
 import { useColorOverrides } from "../contexts/ColorOverrideContext";
+import { CreateFromFileModal } from "./CreateFromFileModal";
 
 function slugify(s: string) {
   return s.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
@@ -11,6 +12,7 @@ export function CompanySelector() {
   const { templates, activeTemplate, setActiveTemplate, addTemplate } = useColorOverrides();
   const [open, setOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showFileModal, setShowFileModal] = useState(false);
   const [name, setName] = useState("");
   const [color, setColor] = useState("#04202C");
   const ref = useRef<HTMLDivElement>(null);
@@ -76,8 +78,22 @@ export function CompanySelector() {
             <Plus size={14} />
             Nueva plantilla
           </button>
+          <button
+            onClick={() => { setOpen(false); setShowFileModal(true); }}
+            className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-pine hover:bg-pine/5 border-t border-nxt-100 transition-colors font-medium"
+          >
+            <Upload size={14} />
+            Crear desde archivo
+          </button>
         </div>
       )}
+
+      <CreateFromFileModal
+        open={showFileModal}
+        onClose={() => setShowFileModal(false)}
+        onCreated={() => setShowFileModal(false)}
+      />
+
 
       {showModal && createPortal(
         <div
