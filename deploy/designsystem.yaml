@@ -1,0 +1,40 @@
+# Docker Swarm stack para designsystem.iagentek.com.mx
+# Sigue el patron de los otros frontends del VPS (etiqmorfsintac, optikal, etc.)
+#
+# Deploy:
+#   docker build --build-arg VITE_SUPABASE_URL=https://designsystem.iagentek.com.mx \
+#                --build-arg VITE_SUPABASE_ANON_KEY=$ANON \
+#                --build-arg VITE_MINIO_ENDPOINT=https://iagentekminioback.iagentek.com.mx \
+#                --build-arg VITE_MINIO_BUCKET=iagentek-designsystem-assets \
+#                -t designsystem-frontend:latest .
+#   docker stack deploy -c deploy/designsystem.yaml designsystem
+
+version: '3.8'
+
+services:
+  frontend:
+    image: designsystem-frontend:latest
+    networks:
+      - iagenteknet
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      labels:
+        - "traefik.docker.network=iagenteknet"
+        - "traefik.enable=true"
+        - "traefik.http.routers.designsystem.entrypoints=websecure"
+        - "traefik.http.routers.designsystem.rule=Host(`designsystem.iagentek.com.mx`)"
+        - "traefik.http.routers.designsystem.service=designsystem"
+        - "traefik.http.routers.designsystem.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.designsystem.loadbalancer.server.port=80"
+
+networks:
+  iagenteknet:
+    external: true
