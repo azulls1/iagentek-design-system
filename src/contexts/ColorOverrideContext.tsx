@@ -6,11 +6,20 @@ import { log } from "../lib/logger";
 type ColorOverrideMap = Record<string, string>;
 type AllOverridesMap = Record<string, ColorOverrideMap>;
 
+export interface ColorRoles {
+  primary: string;
+  secondary?: string;
+  accent?: string;
+  background?: string;
+  text?: string;
+}
+
 export interface Template {
   id: string;
   name: string;
   color: string;
   palette?: Record<string, string>;
+  roles?: ColorRoles;
 }
 
 export const DEFAULT_TEMPLATES: Template[] = [
@@ -103,6 +112,10 @@ export function ColorOverrideProvider({ children, userId }: ProviderProps) {
       const custom = next.filter((t) => !DEFAULT_TEMPLATES.some((d) => d.id === t.id));
       try { localStorage.setItem(templatesKey(uid), JSON.stringify(custom)); } catch { /* ignore */ }
       if (useSupabase && uid !== "anonymous") {
+        // Stuff `roles` inside the `palette` jsonb under a sentinel key so we
+        // dont need a schema migration. On load we extract __roles__ back out.
+        const paletteWithRoles: Record<string, unknown> = { ...(template.palette || {}) };
+        if (template.roles) paletteWithRoles.__roles__ = template.roles;
         supabase
           .from("iagentek-designsystem-templates")
           .upsert({
@@ -111,6 +124,7 @@ export function ColorOverrideProvider({ children, userId }: ProviderProps) {
             color: template.color,
             sort_order: 0,
             user_id: uid,
+            palette: paletteWithRoles,
           })
           .then(({ error }) => {
             if (error) log.warn("ColorOverride", "template persist (supabase)", { msg: error.message });
@@ -144,16 +158,28 @@ export function ColorOverrideProvider({ children, userId }: ProviderProps) {
       try {
         const { data: tplData, error: tplErr } = await supabase
           .from("iagentek-designsystem-templates")
-          .select("id, name, color")
+          .select("id, name, color, palette")
           .eq("user_id", uid);
         if (!tplErr && Array.isArray(tplData) && !cancelled) {
-          const custom: Template[] = tplData.map((row) => ({
-            id: String(row.id),
-            name: String(row.name),
-            color: String(row.color),
-          }));
+          const custom: Template[] = tplData.map((row) => {
+            const tpl: Template = {
+              id: String(row.id),
+              name: String(row.name),
+              color: String(row.color),
+            };
+            // Extract roles from palette.__roles__ sentinel if present.
+            const pal = row.palette as Record<string, unknown> | null | undefined;
+            if (pal && typeof pal === "object" && pal.__roles__) {
+              tpl.roles = pal.__roles__ as ColorRoles;
+              const { __roles__, ...rest } = pal;
+              void __roles__;
+              if (Object.keys(rest).length > 0) tpl.palette = rest as Record<string, string>;
+            } else if (pal && typeof pal === "object") {
+              tpl.palette = pal as Record<string, string>;
+            }
+            return tpl;
+          });
           setTemplates([...DEFAULT_TEMPLATES, ...custom]);
-          // Refresh localStorage cache for next mount.
           try { localStorage.setItem(templatesKey(uid), JSON.stringify(custom)); } catch { /* ignore */ }
           supabaseOk = true;
         }
@@ -192,11 +218,24 @@ export function ColorOverrideProvider({ children, userId }: ProviderProps) {
     return () => { cancelled = true; };
   }, [uid]);
 
-  // --- Apply template palette to :root CSS variables ---
+  // --- Apply template palette + roles to :root CSS variables ---
   useEffect(() => {
     const current = templates.find((t) => t.id === activeTemplate);
     if (!current) return;
     const palette = { ...generatePalette(current.color), ...(current.palette || {}) };
+    // Si el template tiene roles, sobrescriben los slots semanticos.
+    // - primary    → la paleta completa ya viene de current.color; nada extra.
+    // - secondary  → --color-secondary, --color-pine (alias historico)
+    // - accent     → --color-accent
+    // - background → --color-page, --color-background
+    // - text       → --color-text-primary
+    if (current.roles) {
+      const r = current.roles;
+      if (r.secondary)  { palette['color-secondary']    = r.secondary;  palette['color-pine']     = r.secondary; }
+      if (r.accent)     { palette['color-accent']       = r.accent; }
+      if (r.background) { palette['color-page']         = r.background; palette['color-background'] = r.background; }
+      if (r.text)       { palette['color-text-primary'] = r.text; }
+    }
     const root = document.documentElement;
     for (const [key, value] of Object.entries(palette)) {
       root.style.setProperty('--' + key, value);
